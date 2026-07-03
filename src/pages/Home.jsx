@@ -8,7 +8,17 @@ import WeatherSummaryCard from '../components/WeatherSummaryCard'
 import FavoriteCityCard from '../components/FavoriteCityCard'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ErrorCard from '../components/ErrorCard'
-import { favoriteCities } from '../services/dashboardData'
+import Toast from '../components/Toast'
+import {
+  loadFavorites,
+  saveFavorites,
+  loadRecents,
+  saveRecents,
+  addRecentCity,
+  addFavoriteCity,
+  removeFavoriteCity,
+  isFavoriteCity,
+} from '../utils/storage'
 import { getWeatherForecast } from '../services/forecastService'
 
 const defaultCity = 'Chennai'
@@ -18,6 +28,142 @@ function Home() {
   const [weatherData, setWeatherData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [favorites, setFavorites] = useState([])
+  const [recentSearches, setRecentSearches] = useState([])
+  const [toast, setToast] = useState(null)
+
+  const showToast = useCallback((message, type = 'success') => {
+    setToast({ message, type })
+  }, [])
+
+  useEffect(() => {
+    if (!toast) return undefined
+    const timerId = window.setTimeout(() => setToast(null), 3000)
+    return () => window.clearTimeout(timerId)
+  }, [toast])
+
+  const updateRecents = useCallback((city) => {
+    setRecentSearches((current) => {
+      const next = addRecentCity(current, city)
+      saveRecents(next)
+      return next
+    })
+  }, [])
+
+  const updateFavorites = useCallback((nextFavorites) => {
+    setFavorites(nextFavorites)
+    saveFavorites(nextFavorites)
+  }, [])
+
+  useEffect(() => {
+    const storedFavorites = loadFavorites()
+    const storedRecents = loadRecents()
+    setFavorites(storedFavorites)
+    setRecentSearches(storedRecents)
+
+    if (storedFavorites.length === 0) return
+    const refreshFavorites = async () => {
+      const refreshed = await Promise.all(
+        storedFavorites.map(async (favorite) => {
+          try {
+            const result = await getWeatherForecast(favorite.city)
+            return {
+              city: favorite.city,
+              country: favorite.country ?? result.location.country,
+              temp: `${Math.round(result.current.tempC)}°`,
+              condition: result.current.conditionText,
+              icon: result.current.conditionIcon,
+            }
+          } catch {
+            return favorite
+          }
+        }),
+      )
+      updateFavorites(refreshed)
+    }
+
+    void refreshFavorites()
+  }, [updateFavorites])
+
+  const iconUrl = useMemo(() => {
+    if (!weatherData?.current?.conditionIcon) return ''
+    return weatherData.current.conditionIcon
+  }, [weatherData])
+
+  const fetchWeather = useCallback(
+    async (city, saveRecent = false) => {
+      const trimmedCity = city.trim()
+      if (!trimmedCity || loading) return
+
+      setLoading(true)
+      setError(null)
+
+      try {
+        const result = await getWeatherForecast(trimmedCity)
+        setWeatherData(result)
+
+        if (saveRecent) {
+          updateRecents(trimmedCity)
+        }
+        setSearchValue(trimmedCity)
+      } catch (fetchError) {
+        setWeatherData(null)
+        setError(fetchError.message)
+      } finally {
+        setLoading(false)
+      }
+    },
+    [loading, updateRecents],
+  )
+
+  const handleAddFavorite = useCallback(() => {
+    if (!weatherData) return
+
+    const cityName = weatherData.location.city
+    if (isFavoriteCity(favorites, cityName)) {
+      showToast(`${cityName} is already in Favorites`, 'info')
+      return
+    }
+
+    if (favorites.length >= 10) {
+      showToast('Favorites limit is 10 cities. Remove one to add another.', 'warning')
+      return
+    }
+
+    const nextFavorites = addFavoriteCity(favorites, {
+      city: cityName,
+      country: weatherData.location.country,
+      temp: `${Math.round(weatherData.current.tempC)}°`,
+      condition: weatherData.current.conditionText,
+      icon: iconUrl,
+    })
+
+    updateFavorites(nextFavorites)
+    showToast(`Added ${cityName} to Favorites`, 'success')
+  }, [favorites, iconUrl, showToast, updateFavorites, weatherData])
+
+  const handleRemoveFavorite = useCallback(
+    (cityName) => {
+      const nextFavorites = removeFavoriteCity(favorites, cityName)
+      updateFavorites(nextFavorites)
+      showToast(`Removed ${cityName} from Favorites`, 'success')
+    },
+    [favorites, showToast, updateFavorites],
+  )
+
+  const handleSelectFavorite = useCallback(
+    (cityName) => {
+      void fetchWeather(cityName, true)
+    },
+    [fetchWeather],
+  )
+
+  const handleUseRecent = useCallback(
+    (cityName) => {
+      void fetchWeather(cityName, true)
+    },
+    [fetchWeather],
+  )
 
   const weatherHighlights = useMemo(() => {
     if (!weatherData) return []
@@ -116,11 +262,6 @@ function Home() {
     return items
   }, [weatherData])
 
-  const iconUrl = useMemo(() => {
-    if (!weatherData?.current?.conditionIcon) return ''
-    return weatherData.current.conditionIcon
-  }, [weatherData])
-
   const hourlyChartData = useMemo(() => {
     if (!weatherData?.forecast?.hourly) return []
 
@@ -157,23 +298,6 @@ function Home() {
     ]
   }, [weatherData])
 
-  const fetchWeather = useCallback(async (city) => {
-    if (!city.trim() || loading) return
-
-    setLoading(true)
-    setError(null)
-
-    try {
-      const result = await getWeatherForecast(city)
-      setWeatherData(result)
-    } catch (fetchError) {
-      setWeatherData(null)
-      setError(fetchError.message)
-    } finally {
-      setLoading(false)
-    }
-  }, [loading])
-
   useEffect(() => {
     const initialFetch = async () => {
       setLoading(true)
@@ -200,7 +324,7 @@ function Home() {
       setError('Please enter a city name to search.')
       return
     }
-    fetchWeather(trimmed)
+    fetchWeather(trimmed, true)
   }
 
   const handleInputChange = (event) => {
@@ -253,8 +377,43 @@ function Home() {
               °C / °F
             </button>
           </div>
+
+          <div className="hero-action-row">
+            <button
+              type="button"
+              className="pill-button pill-primary"
+              onClick={handleAddFavorite}
+              disabled={!weatherData || loading}
+            >
+              {weatherData && isFavoriteCity(favorites, weatherData.location.city)
+                ? 'Saved to favorites'
+                : 'Save to favorites'}
+            </button>
+          </div>
+
+          {recentSearches.length > 0 && (
+            <div className="recent-searches-panel">
+              <p className="recent-searches-label">Recent searches</p>
+              <div className="recent-pill-list">
+                {recentSearches.map((city) => (
+                  <button
+                    key={city}
+                    type="button"
+                    className="pill-button pill-secondary"
+                    onClick={() => handleUseRecent(city)}
+                  >
+                    {city}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </section>
+
+      {toast && (
+        <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
+      )}
 
       {loading && <LoadingSpinner />}
 
@@ -382,9 +541,18 @@ function Home() {
           </div>
         </div>
         <div className="favorites-grid">
-          {favoriteCities.map((city) => (
-            <FavoriteCityCard key={city.city} {...city} />
-          ))}
+          {favorites.length > 0 ? (
+            favorites.map((city) => (
+              <FavoriteCityCard
+                key={city.city}
+                {...city}
+                onSelect={() => handleSelectFavorite(city.city)}
+                onRemove={() => handleRemoveFavorite(city.city)}
+              />
+            ))
+          ) : (
+            <div className="empty-favorites">No favorites saved yet. Save a city to return quickly.</div>
+          )}
         </div>
       </section>
     </div>
