@@ -32,6 +32,22 @@ function Home() {
   const [recentSearches, setRecentSearches] = useState([])
   const [toast, setToast] = useState(null)
 
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours()
+    if (hour < 12) return 'Good morning'
+    if (hour < 18) return 'Good afternoon'
+    return 'Good evening'
+  }, [])
+
+  const themeClass = useMemo(() => {
+    const condition = weatherData?.current?.conditionText?.toLowerCase() || ''
+    if (condition.includes('snow')) return 'theme-snow'
+    if (condition.includes('rain') || condition.includes('drizzle') || condition.includes('storm')) return 'theme-rain'
+    if (condition.includes('cloud')) return 'theme-cloudy'
+    if (weatherData?.current?.isDay === 0 || condition.includes('night')) return 'theme-night'
+    return 'theme-sunny'
+  }, [weatherData])
+
   const showToast = useCallback((message, type = 'success') => {
     setToast({ message, type })
   }, [])
@@ -332,19 +348,24 @@ function Home() {
   }
 
   return (
-    <div className="dashboard-home">
+    <div className={`dashboard-home ${themeClass}`}>
       <section className="hero-panel glass-card">
         <div className="hero-copy">
-          <p className="hero-overline">Good morning 👋</p>
-          <h2>Welcome to SkySense</h2>
+          <p className="hero-overline">{greeting}, welcome back</p>
+          <div className="hero-weather-headline">
+            <h1>{weatherData ? `${Math.round(weatherData.current.tempC)}°C` : 'SkySense'}</h1>
+            <span>{weatherData ? weatherData.current.conditionText : 'Premium weather dashboard'}</span>
+          </div>
           <p className="hero-description">
-            Your premium weather cockpit. Explore clean daily insights, horizon forecasts,
-            and elegant controls built for a modern dashboard experience.
+            {weatherData
+              ? `Live weather in ${weatherData.location.city}, ${weatherData.location.country}`
+              : 'Search a city to reveal live forecasts, charts, and personalized favorites.'}
           </p>
           {weatherData && (
-            <p className="hero-meta">
-              {weatherData.localDate} · {weatherData.localTime}
-            </p>
+            <div className="hero-meta-row">
+              <span>{weatherData.localDate}</span>
+              <span>{weatherData.localTime}</span>
+            </div>
           )}
         </div>
 

@@ -1,17 +1,15 @@
 import {
-  Gauge,
+  Home,
   Star,
-  Activity,
+  BarChart3,
   Settings,
-  Info,
 } from 'lucide-react'
 
 const navItems = [
-  { path: '/', label: 'Dashboard', icon: Gauge },
+  { path: '/', label: 'Dashboard', icon: Home },
   { path: '/favorites', label: 'Favorites', icon: Star },
-  { path: '/analytics', label: 'Analytics', icon: Activity },
+  { path: '/analytics', label: 'Analytics', icon: BarChart3 },
   { path: '/settings', label: 'Settings', icon: Settings },
-  { path: '/about', label: 'About', icon: Info },
 ]
 
 export default navItems
