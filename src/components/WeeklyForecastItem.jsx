@@ -1,9 +1,9 @@
-function WeeklyForecastItem({ day, icon: Icon, condition, temp, rain }) {
+function WeeklyForecastItem({ day, icon, condition, temp, rain }) {
   return (
     <article className="weekly-item" tabIndex="0">
       <div className="weekly-day">{day}</div>
       <div className="weekly-mid">
-        <Icon size={20} />
+        {icon ? <img src={icon} alt="Weather icon" width="20" height="20" /> : null}
         <span>{condition}</span>
       </div>
       <div className="weekly-data">

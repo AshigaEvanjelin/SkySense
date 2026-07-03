@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Search, MapPin, Moon, Droplet, Wind, Eye, Gauge, Sun, Airplay, Cloud } from 'lucide-react'
 import WeatherStatCard from '../components/WeatherStatCard'
 import HourlyForecastCard from '../components/HourlyForecastCard'
@@ -8,96 +8,155 @@ import FavoriteCityCard from '../components/FavoriteCityCard'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ErrorCard from '../components/ErrorCard'
 import {
-  hourlyForecast,
-  weeklyForecast,
   analyticsPreview,
   favoriteCities,
 } from '../services/dashboardData'
-import { getCurrentWeather } from '../services/weatherService'
+import { getWeatherForecast } from '../services/forecastService'
 
 const defaultCity = 'Chennai'
 
 function Home() {
   const [searchValue, setSearchValue] = useState(defaultCity)
-  const [weather, setWeather] = useState(null)
+  const [weatherData, setWeatherData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
   const weatherHighlights = useMemo(() => {
-    if (!weather) return []
+    if (!weatherData) return []
 
-    return [
+    const { current, forecast } = weatherData
+    const items = [
       {
         title: 'Humidity',
-        value: `${weather.humidity}%`,
+        value: `${current.humidity}%`,
         description: 'Comfort level',
         icon: Droplet,
       },
       {
         title: 'Wind',
-        value: `${weather.windKph} km/h`,
+        value: `${current.windKph} km/h`,
         description: 'Current breeze',
         icon: Wind,
       },
       {
         title: 'Visibility',
-        value: `${weather.visibilityKm} km`,
+        value: `${current.visibilityKm} km`,
         description: 'Clear sight',
         icon: Eye,
       },
       {
         title: 'Pressure',
-        value: `${weather.pressureMb} mb`,
+        value: `${current.pressureMb} mb`,
         description: 'Atmospheric pressure',
         icon: Gauge,
       },
       {
         title: 'UV Index',
-        value: `${weather.uvIndex}`,
+        value: `${current.uvIndex}`,
         description: 'Current UV exposure',
         icon: Sun,
       },
       {
         title: 'Air Quality',
-        value: weather.aqi ? `${weather.aqi}` : 'N/A',
+        value: current.aqi ? `${current.aqi}` : 'N/A',
         description: 'EPA index',
         icon: Airplay,
       },
       {
         title: 'Cloud Cover',
-        value: `${weather.cloudCover}%`,
+        value: `${current.cloudCover}%`,
         description: 'Cloud coverage',
         icon: Cloud,
       },
     ]
-  }, [weather])
+
+    if (forecast.sunrise) {
+      items.push({
+        title: 'Sunrise',
+        value: forecast.sunrise,
+        description: 'Day begins',
+        icon: Sun,
+      })
+    }
+
+    if (forecast.sunset) {
+      items.push({
+        title: 'Sunset',
+        value: forecast.sunset,
+        description: 'Golden hour',
+        icon: Sun,
+      })
+    }
+
+    if (forecast.moonPhase) {
+      items.push({
+        title: 'Moon Phase',
+        value: forecast.moonPhase,
+        description: 'Lunar phase',
+        icon: Cloud,
+      })
+    }
+
+    if (forecast.maxTemp) {
+      items.push({
+        title: 'Max Temp',
+        value: forecast.maxTemp,
+        description: 'Highest today',
+        icon: Sun,
+      })
+    }
+
+    if (forecast.minTemp) {
+      items.push({
+        title: 'Min Temp',
+        value: forecast.minTemp,
+        description: 'Lowest today',
+        icon: Cloud,
+      })
+    }
+
+    return items
+  }, [weatherData])
 
   const iconUrl = useMemo(() => {
-    if (!weather?.conditionIcon) return ''
-    return weather.conditionIcon.startsWith('http')
-      ? weather.conditionIcon
-      : `https:${weather.conditionIcon}`
-  }, [weather])
+    if (!weatherData?.current?.conditionIcon) return ''
+    return weatherData.current.conditionIcon
+  }, [weatherData])
 
-  const fetchWeather = async (city) => {
+  const fetchWeather = useCallback(async (city) => {
     if (!city.trim() || loading) return
 
     setLoading(true)
     setError(null)
 
     try {
-      const result = await getCurrentWeather(city)
-      setWeather(result)
+      const result = await getWeatherForecast(city)
+      setWeatherData(result)
     } catch (fetchError) {
-      setWeather(null)
+      setWeatherData(null)
       setError(fetchError.message)
     } finally {
       setLoading(false)
     }
-  }
+  }, [loading])
 
   useEffect(() => {
-    fetchWeather(defaultCity)
+    const initialFetch = async () => {
+      setLoading(true)
+      setError(null)
+
+      try {
+        const result = await getWeatherForecast(defaultCity)
+        setWeatherData(result)
+      } catch (fetchError) {
+        setWeatherData(null)
+        setError(fetchError.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    void initialFetch()
   }, [])
 
   const handleSubmit = (event) => {
@@ -124,9 +183,9 @@ function Home() {
             Your premium weather cockpit. Explore clean daily insights, horizon forecasts,
             and elegant controls built for a modern dashboard experience.
           </p>
-          {weather && (
+          {weatherData && (
             <p className="hero-meta">
-              {weather.localDate} · {weather.localTime}
+              {weatherData.localDate} · {weatherData.localTime}
             </p>
           )}
         </div>
@@ -151,7 +210,7 @@ function Home() {
           {error && <ErrorCard message={error} />}
           <div className="hero-action-buttons">
             <button type="button" className="pill-button" disabled>
-              <MapPin size={16} /> {weather ? `${weather.city}, ${weather.country}` : 'Chennai, India'}
+              <MapPin size={16} /> {weatherData ? `${weatherData.location.city}, ${weatherData.location.country}` : 'Chennai, India'}
             </button>
             <button type="button" className="pill-button pill-secondary" disabled>
               <Moon size={16} /> Dark mode
@@ -165,43 +224,43 @@ function Home() {
 
       {loading && <LoadingSpinner />}
 
-      {!loading && weather && (
+{!loading && weatherData && (
         <>
           <section className="weather-panel">
             <article className="weather-card glass-card">
               <div className="weather-card-top">
                 <div>
                   <p className="eyebrow-text">Today</p>
-                  <h1>{Math.round(weather.tempC)}°C</h1>
-                  <p className="weather-location">{weather.city}, {weather.country}</p>
+                  <h1>{Math.round(weatherData.current.tempC)}°C</h1>
+                  <p className="weather-location">{weatherData.location.city}, {weatherData.location.country}</p>
                 </div>
-                <div className="weather-status">{weather.conditionText}</div>
+                <div className="weather-status">{weatherData.current.conditionText}</div>
               </div>
 
               <div className="weather-card-body">
                 <div className="weather-details">
                   <div className="weather-detail-item">
                     <p className="weather-label">Feels like</p>
-                    <p className="weather-value">{Math.round(weather.feelsLikeC)}°C</p>
+                    <p className="weather-value">{Math.round(weatherData.current.feelsLikeC)}°C</p>
                   </div>
                   <div className="weather-detail-item">
                     <p className="weather-label">Local time</p>
-                    <p className="weather-value">{weather.localTime}</p>
+                    <p className="weather-value">{weatherData.localTime}</p>
                   </div>
                   <div className="weather-detail-item">
                     <p className="weather-label">Local date</p>
-                    <p className="weather-value">{weather.localDate}</p>
+                    <p className="weather-value">{weatherData.localDate}</p>
                   </div>
                 </div>
                 <div className="weather-visual">
                   <div className="weather-condition-card">
                     <img
                       src={iconUrl}
-                      alt={weather.conditionText}
+                      alt={weatherData.current.conditionText}
                       width="104"
                       height="104"
                     />
-                    <p className="weather-condition-text">{weather.conditionText}</p>
+                    <p className="weather-condition-text">{weatherData.current.conditionText}</p>
                   </div>
                 </div>
               </div>
@@ -224,7 +283,7 @@ function Home() {
         </>
       )}
 
-      {!loading && !weather && !error && <p className="empty-state">Search for a city to view weather.</p>}
+      {!loading && !weatherData && !error && <p className="empty-state">Search for a city to view weather.</p>}
 
       <section className="section-group">
         <div className="section-heading">
@@ -234,9 +293,13 @@ function Home() {
           </div>
         </div>
         <div className="hourly-scroll" aria-label="Hourly forecast">
-          {hourlyForecast.map((item) => (
-            <HourlyForecastCard key={item.time} {...item} />
-          ))}
+          {weatherData?.forecast?.hourly?.length > 0
+            ? weatherData.forecast.hourly.map((item) => (
+                <HourlyForecastCard key={item.time} {...item} />
+              ))
+            : Array.from({ length: 4 }).map((_, index) => (
+                <HourlyForecastCard key={`placeholder-${index}`} time="--:--" temp="--" icon={null} chanceOfRain="--" />
+              ))}
         </div>
       </section>
 
@@ -249,9 +312,13 @@ function Home() {
             </div>
           </div>
           <div className="weekly-list">
-            {weeklyForecast.map((item) => (
-              <WeeklyForecastItem key={item.day} {...item} />
-            ))}
+            {weatherData?.forecast?.daily?.length > 0
+              ? weatherData.forecast.daily.map((item) => (
+                  <WeeklyForecastItem key={item.day} {...item} />
+                ))
+              : Array.from({ length: 3 }).map((_, index) => (
+                  <WeeklyForecastItem key={`placeholder-${index}`} day="--" condition="--" maxTemp="--" minTemp="--" rain="--" icon={null} />
+                ))}
           </div>
         </div>
 

@@ -2,10 +2,6 @@ const apiKey = import.meta.env.VITE_WEATHER_API_KEY
 const apiBase = 'https://api.weatherapi.com/v1'
 const timeoutMs = 10000
 
-console.log("API Key:", apiKey);
-
-
-
 function createTimeoutSignal(timeout) {
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), timeout)
@@ -49,31 +45,28 @@ export async function getCurrentWeather(city) {
     const { temp_c, feelslike_c, condition, humidity, wind_kph, vis_km, pressure_mb, cloud, uv, air_quality } = data.current
     const { date, time } = parseLocalTime(localtime)
 
-    
-    
-
     return {
-  city: name,
-  country,
-  tempC: temp_c,
-  feelsLikeC: feelslike_c,
-  conditionText: condition.text,
-  conditionIcon: `https:${condition.icon}`,
-  humidity,
-  windKph: wind_kph,
-  visibilityKm: vis_km,
-  pressureMb: pressure_mb,
-  cloudCover: cloud,
-  uvIndex: uv,
-  aqi: air_quality?.["us-epa-index"] ?? "N/A",
-  localDate: date,
-  localTime: time,
-}
+      city: localCity,
+      country,
+      tempC: temp_c,
+      feelsLikeC: feelslike_c,
+      conditionText: condition.text,
+      conditionIcon: condition.icon.startsWith('http') ? condition.icon : `https:${condition.icon}`,
+      humidity,
+      windKph: wind_kph,
+      visibilityKm: vis_km,
+      pressureMb: pressure_mb,
+      cloudCover: cloud,
+      uvIndex: uv,
+      aqi: air_quality?.['us-epa-index'] ?? 'N/A',
+      localDate: date,
+      localTime: time,
+    }
   } catch (error) {
     if (error.name === 'AbortError') {
-      throw new Error('Request timed out. Please try again.')
+      throw new Error('Request timed out. Please try again.', { cause: error })
     }
-    throw new Error(error.message || 'Unable to load weather data.')
+    throw new Error(error.message || 'Unable to load weather data.', { cause: error })
   } finally {
     cleanup()
   }
