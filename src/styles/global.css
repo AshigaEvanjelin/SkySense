@@ -71,9 +71,10 @@ svg {
 
 button:focus-visible,
 a:focus-visible,
-input:focus-visible {
-  outline: 3px solid rgba(76, 110, 245, 0.35);
-  outline-offset: 2px;
+input:focus-visible,
+select:focus-visible {
+  outline: 3px solid rgba(138, 180, 255, 0.45);
+  outline-offset: 3px;
 }
 
 button,
@@ -101,19 +102,21 @@ body::-webkit-scrollbar-thumb {
 .app-shell {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: 300px 1fr;
   gap: var(--space-lg);
   padding: var(--space-lg);
   max-width: var(--max-content-width);
   margin: 0 auto;
+  background: radial-gradient(circle at top left, rgba(72, 142, 255, 0.22), transparent 35%),
+    radial-gradient(circle at bottom right, rgba(24, 32, 76, 0.85), transparent 35%);
 }
 
 .sidebar,
 .sidebar-open {
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
+  background: rgba(12, 22, 55, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 40px 80px rgba(4, 13, 35, 0.22);
   padding: var(--space-md);
   position: sticky;
   top: var(--space-lg);
@@ -243,11 +246,12 @@ body::-webkit-scrollbar-thumb {
 }
 
 .page-container {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  background: rgba(6, 14, 40, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 28px 80px rgba(4, 13, 35, 0.26);
   padding: var(--space-lg);
+  backdrop-filter: blur(16px);
 }
 
 .page-header {
@@ -260,10 +264,16 @@ body::-webkit-scrollbar-thumb {
 
 .page-overline {
   margin: 0 0 6px;
-  color: var(--color-secondary);
+  color: #a8d7ff;
   font-size: 0.85rem;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
+}
+
+.page-subtitle {
+  margin: 10px 0 0;
+  color: #d9e5ff;
+  max-width: 680px;
 }
 
 .page-content {
@@ -297,6 +307,33 @@ body::-webkit-scrollbar-thumb {
 .dashboard-home {
   display: grid;
   gap: var(--space-lg);
+  position: relative;
+  z-index: 1;
+}
+
+.dashboard-home.theme-sunny {
+  background: radial-gradient(circle at top left, rgba(255, 190, 105, 0.18), transparent 35%),
+    linear-gradient(180deg, rgba(255, 236, 194, 0.2), rgba(142, 197, 255, 0.18));
+}
+
+.dashboard-home.theme-cloudy {
+  background: radial-gradient(circle at top left, rgba(172, 190, 213, 0.22), transparent 35%),
+    linear-gradient(180deg, rgba(222, 231, 244, 0.18), rgba(166, 181, 206, 0.14));
+}
+
+.dashboard-home.theme-rain {
+  background: radial-gradient(circle at top left, rgba(96, 132, 192, 0.22), transparent 35%),
+    linear-gradient(180deg, rgba(25, 46, 98, 0.48), rgba(10, 20, 45, 0.72));
+}
+
+.dashboard-home.theme-snow {
+  background: radial-gradient(circle at top left, rgba(193, 225, 255, 0.22), transparent 35%),
+    linear-gradient(180deg, rgba(246, 252, 255, 0.9), rgba(214, 232, 251, 0.5));
+}
+
+.dashboard-home.theme-night {
+  background: radial-gradient(circle at top left, rgba(22, 36, 70, 0.6), transparent 35%),
+    linear-gradient(180deg, rgba(8, 14, 39, 0.95), rgba(22, 39, 71, 0.85));
 }
 
 .glass-card {
@@ -508,6 +545,20 @@ body::-webkit-scrollbar-thumb {
   display: grid;
   place-items: center;
   min-height: 250px;
+}
+
+.weather-condition-card img {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
 }
 
 .weather-illustration {

@@ -12,7 +12,7 @@ function Sidebar({ isOpen, onClose, onToggle }) {
           </span>
           <div>
             <p className="brand-name">SkySense</p>
-            <p className="brand-tag">Weather dashboard</p>
+            <p className="brand-tag">Immersive weather</p>
           </div>
         </div>
         <button
