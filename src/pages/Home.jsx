@@ -3,14 +3,12 @@ import { Search, MapPin, Moon, Droplet, Wind, Eye, Gauge, Sun, Airplay, Cloud } 
 import WeatherStatCard from '../components/WeatherStatCard'
 import HourlyForecastCard from '../components/HourlyForecastCard'
 import WeeklyForecastItem from '../components/WeeklyForecastItem'
-import AnalyticsCard from '../components/AnalyticsCard'
+import WeatherAnalyticsCharts from '../components/WeatherAnalyticsCharts'
+import WeatherSummaryCard from '../components/WeatherSummaryCard'
 import FavoriteCityCard from '../components/FavoriteCityCard'
 import LoadingSpinner from '../components/LoadingSpinner'
 import ErrorCard from '../components/ErrorCard'
-import {
-  analyticsPreview,
-  favoriteCities,
-} from '../services/dashboardData'
+import { favoriteCities } from '../services/dashboardData'
 import { getWeatherForecast } from '../services/forecastService'
 
 const defaultCity = 'Chennai'
@@ -121,6 +119,42 @@ function Home() {
   const iconUrl = useMemo(() => {
     if (!weatherData?.current?.conditionIcon) return ''
     return weatherData.current.conditionIcon
+  }, [weatherData])
+
+  const hourlyChartData = useMemo(() => {
+    if (!weatherData?.forecast?.hourly) return []
+
+    return weatherData.forecast.hourly.slice(0, 12).map((hour) => ({
+      time: hour.time,
+      temperature: Number((hour.temperature ?? hour.temp)?.toString().replace('°', '')) || 0,
+      humidity: Number(hour.humidity ?? 0),
+      wind: Number(hour.wind ?? 0),
+      rainChance: Number(hour.rainChance ?? 0),
+      uv: Number(hour.uv ?? 0),
+    }))
+  }, [weatherData])
+
+  const weatherSummary = useMemo(() => {
+    if (!weatherData) return []
+
+    const hourly = weatherData.forecast.hourly || []
+    const numericTemps = hourly
+      .map((hour) => Number(hour.temperature?.toString().replace('°', '')))
+      .filter((temp) => !Number.isNaN(temp))
+    const averageTemp = numericTemps.length
+      ? `${(numericTemps.reduce((sum, temp) => sum + temp, 0) / numericTemps.length).toFixed(1)}°`
+      : '--'
+
+    return [
+      { label: 'Highest temperature', value: weatherData.forecast.maxTemp ?? '--' },
+      { label: 'Lowest temperature', value: weatherData.forecast.minTemp ?? '--' },
+      { label: 'Average temperature', value: averageTemp },
+      { label: 'Sunrise', value: weatherData.forecast.sunrise ?? '--' },
+      { label: 'Sunset', value: weatherData.forecast.sunset ?? '--' },
+      { label: 'Moon phase', value: weatherData.forecast.moonPhase ?? '--' },
+      { label: 'UV index', value: weatherData.current.uvIndex ?? '--' },
+      { label: 'Air quality', value: weatherData.current.aqi ? `${weatherData.current.aqi}` : '--' },
+    ]
   }, [weatherData])
 
   const fetchWeather = useCallback(async (city) => {
@@ -329,11 +363,14 @@ function Home() {
               <h3>Trends at a glance</h3>
             </div>
           </div>
-          <div className="analytics-grid">
-            {analyticsPreview.map((item) => (
-              <AnalyticsCard key={item.title} {...item} />
-            ))}
-          </div>
+          {weatherData ? (
+            <>
+              <WeatherSummaryCard summary={weatherSummary} />
+              <WeatherAnalyticsCharts hourlyData={hourlyChartData} />
+            </>
+          ) : (
+            <div className="analytics-empty-state">Search a city to view analytics.</div>
+          )}
         </div>
       </section>
 

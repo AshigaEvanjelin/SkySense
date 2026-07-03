@@ -31,9 +31,14 @@ function formatHourlyForecast(hours, currentLocaltime) {
     .map((hour) => ({
       time: hour.time.split(' ')[1],
       temp: `${Math.round(hour.temp_c)}°`,
+      temperature: Math.round(hour.temp_c),
+      humidity: hour.humidity,
+      wind: Math.round(hour.wind_kph),
+      uv: hour.uv,
       icon: hour.condition.icon.startsWith('http') ? hour.condition.icon : `https:${hour.condition.icon}`,
       conditionText: hour.condition.text,
       chanceOfRain: hour.chance_of_rain != null ? `${hour.chance_of_rain}%` : '0%',
+      rainChance: Number(hour.chance_of_rain ?? 0),
     }))
 }
 
